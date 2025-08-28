@@ -3,7 +3,11 @@
 using OpenAI;
 using OpenAI.Chat;
 using System.ClientModel;
+using System.ComponentModel;
+using Microsoft.Extensions.AI;
+using ChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using Microsoft.AI.Foundry.Local;
+
 
 var alias = "deepseek-r1-distill-qwen-7b-generic-gpu:3";
 
@@ -16,31 +20,28 @@ OpenAIClient client = new OpenAIClient(key, new OpenAIClientOptions
     Endpoint = manager.Endpoint
 });
 
-var chatClient = client.GetChatClient(model?.ModelId);
+var chatClient = client.GetChatClient(model?.ModelId).AsIChatClient();
 
 var messages = new ChatMessage[]
 {
-    ChatMessage.CreateSystemMessage("You are help desk assistant with some tools. Output the tool calls only in response to the user prompt"),
-    ChatMessage.CreateUserMessage("'I'd like to order 10 'Clean Code' books' to 666-111-222")
+    new ChatMessage(ChatRole.System, "You are help desk assistant with some tools. Output the tool calls only in response to the user prompt"),
+    new ChatMessage(ChatRole.User, "'I'd like to order 10 'Clean Code' books' to 666-111-222")
 };
 
 var tool = SmsService.GetTool();
 
-ChatCompletionOptions options = new()
+ChatOptions options = new()
 {
-   Tools = { tool },
-   MaxOutputTokenCount = 2048
+   Tools = [ AIFunctionFactory.Create(SmsService.SendSms) ],
+   MaxOutputTokens = 2048
 };
 
-var completionUpdates = chatClient.CompleteChatStreaming(messages, options);
+var completionUpdates = chatClient.GetStreamingResponseAsync(messages, options);
 
 Console.Write($"[ASSISTANT]: ");
-foreach (var completionUpdate in completionUpdates)
+await foreach (var completionUpdate in completionUpdates)
 {
-    if (completionUpdate.ContentUpdate.Count > 0)
-    {
-        Console.Write(completionUpdate.ContentUpdate[0].Text);
-    }
+    Console.Write(completionUpdate.Text);
 }
 
 public class SmsService
@@ -71,7 +72,8 @@ public class SmsService
 
         return tool;
     }
-
+    
+    [Description("Given a phone number and a message send an SMS")]
     public static string SendSms(string message, string phoneNumber)
     {
         return "SMS sent!";
