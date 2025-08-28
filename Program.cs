@@ -1,7 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using OpenAI;
-using OpenAI.Chat;
 using System.ClientModel;
 using System.ComponentModel;
 using Microsoft.Extensions.AI;
