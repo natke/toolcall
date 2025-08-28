@@ -28,8 +28,6 @@ var messages = new ChatMessage[]
     new ChatMessage(ChatRole.User, "'I'd like to order 10 'Clean Code' books' to 666-111-222")
 };
 
-var tool = SmsService.GetTool();
-
 ChatOptions options = new()
 {
    Tools = [ AIFunctionFactory.Create(SmsService.SendSms) ],
@@ -46,33 +44,7 @@ await foreach (var completionUpdate in completionUpdates)
 
 public class SmsService
 {
-    static public ChatTool GetTool()
-    {
-        ChatTool tool = ChatTool.CreateFunctionTool(
-            nameof(SendSms),
-            "send SMS",
-            BinaryData.FromString(
-                @"
-            {
-              ""type"": ""object"",
-              ""properties"": {
-                ""message"": {
-                  ""type"": ""string"",
-                  ""description"": ""text of SMS""
-                },
-                ""phoneNumber"": {
-                  ""type"": ""string"",
-                  ""description"": ""phone number of recipient""
-                }
-              },
-              ""required"": [""message"", ""phoneNumber""]
-            }
-        ")
-        );
 
-        return tool;
-    }
-    
     [Description("Given a phone number and a message send an SMS")]
     public static string SendSms(string message, string phoneNumber)
     {
