@@ -1,14 +1,17 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using OpenAI;
+using System.Text.Json;
+using System.Text;
 using System.ClientModel;
 using System.ComponentModel;
 using Microsoft.AI.Foundry.Local;
 using Microsoft.Extensions.AI;
 using ChatMessage = Microsoft.Extensions.AI.ChatMessage;
-using System.Text.Json;
 
 var alias = "qwen2.5-7b-instruct-generic-gpu";
+
+Console.WriteLine("Starting model...");
 
 var manager = await FoundryLocalManager.StartModelAsync(aliasOrModelId: alias);
 
@@ -19,13 +22,13 @@ OpenAIClient client = new OpenAIClient(key, new OpenAIClientOptions
     Endpoint = manager.Endpoint
 });
 
-var chatClient = client.GetChatClient(model?.ModelId).AsIChatClient();
+var chatClient = client.GetChatClient(model?.ModelId).AsIChatClient().AsBuilder().UseFunctionInvocation().Build();
 
 IList<AITool> tools = [AIFunctionFactory.Create(StringService.Reverse), AIFunctionFactory.Create(SmsService.SendSms)];
 
 var messages = new ChatMessage[]
 {
-    new ChatMessage(ChatRole.System, "You are help assistant with some tools."),
+    new ChatMessage(ChatRole.System, "You are a helpful assistant with some tools."),
     new ChatMessage(ChatRole.User, "Reverse the string 'Hello World'.")
 };
 
@@ -33,21 +36,29 @@ var messages = new ChatMessage[]
 ChatOptions options = new()
 {
     Tools = tools,
+    ToolMode = ChatToolMode.Auto,
     MaxOutputTokens = 2048
 };
-
 
 Console.WriteLine(JsonSerializer.Serialize(messages));
 Console.WriteLine(JsonSerializer.Serialize(options));
 
 
-var completionUpdates = chatClient.GetStreamingResponseAsync(messages, options);
+var completion = await chatClient.GetResponseAsync(messages, options);
 
-Console.Write($"[ASSISTANT]: ");
-await foreach (var completionUpdate in completionUpdates)
+//Console.WriteLine(JsonSerializer.Serialize(completion));
+
+var modelOutput = new StringBuilder();
+foreach (var m in completion.Messages)
 {
-    Console.Write(completionUpdate.Text);
-}
+    var msg = new { MessageRole = m.Role, Content = m.Contents?.First() };
+
+    // Print the completionUpdate.Contents as formatted JSON for clarity
+    modelOutput.Append($"{JsonSerializer.Serialize(msg, new JsonSerializerOptions { WriteIndented = true })}");
+};
+
+File.WriteAllText("output.json", modelOutput.ToString());
+
 
 public class SmsService
 {
