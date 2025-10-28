@@ -9,7 +9,7 @@ using Microsoft.AI.Foundry.Local;
 using Microsoft.Extensions.AI;
 using ChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
-var alias = "qwen2.5-7b-instruct-generic-gpu";
+var alias = "qwen2.5-coder-7b-instruct-generic-gpu:3";
 
 Console.WriteLine("Starting model...");
 
@@ -40,20 +40,19 @@ ChatOptions options = new()
     MaxOutputTokens = 2048
 };
 
-Console.WriteLine(JsonSerializer.Serialize(messages));
-Console.WriteLine(JsonSerializer.Serialize(options));
-
+//Console.WriteLine(JsonSerializer.Serialize(messages));
+//Console.WriteLine(JsonSerializer.Serialize(options));
 
 var completion = await chatClient.GetResponseAsync(messages, options);
 
-//Console.WriteLine(JsonSerializer.Serialize(completion));
+Console.WriteLine(JsonSerializer.Serialize(completion));
 
+// This section formats and writes the output to a JSON file. It is for clarity and debugging purposes.
+// It prints the conversation output to a file named output.json. This section can be omitted if not needed.
 var modelOutput = new StringBuilder();
 foreach (var m in completion.Messages)
 {
     var msg = new { MessageRole = m.Role, Content = m.Contents?.First() };
-
-    // Print the completionUpdate.Contents as formatted JSON for clarity
     modelOutput.Append($"{JsonSerializer.Serialize(msg, new JsonSerializerOptions { WriteIndented = true })}");
 };
 
