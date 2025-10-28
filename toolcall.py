@@ -101,7 +101,7 @@ class Qwen2_5:
        }
 
         # 3. Execute the tool logic for get_horoscope
-        result = {"horoscope": get_tool[tool_name](tool_call_arguments["sign"])}
+        result = {f"{tool_name}": get_tool[tool_name](tool_call_arguments["sign"])}
 
         # 4. Provide tool call results to the model
         input_list.append({

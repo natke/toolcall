@@ -24,12 +24,17 @@ OpenAIClient client = new OpenAIClient(key, new OpenAIClientOptions
 
 var chatClient = client.GetChatClient(model?.ModelId).AsIChatClient().AsBuilder().UseFunctionInvocation().Build();
 
-IList<AITool> tools = [AIFunctionFactory.Create(StringService.Reverse), AIFunctionFactory.Create(SmsService.SendSms)];
+IList<AITool> tools = [
+    AIFunctionFactory.Create(StringService.Reverse),
+    AIFunctionFactory.Create(SmsService.SendSms),
+    AIFunctionFactory.Create(HoroscopeService.GetHoroscope),
+    AIFunctionFactory.Create(HoroscopeService.GetSun),
+    AIFunctionFactory.Create(HoroscopeService.GetMoon)];
 
 var messages = new ChatMessage[]
 {
     new ChatMessage(ChatRole.System, "You are a helpful assistant with some tools."),
-    new ChatMessage(ChatRole.User, "Reverse the string 'Hello World'.")
+    new ChatMessage(ChatRole.User, "What is my sun? I am a Scorpio.")
 };
 
 
@@ -40,8 +45,6 @@ ChatOptions options = new()
     MaxOutputTokens = 2048
 };
 
-//Console.WriteLine(JsonSerializer.Serialize(messages));
-//Console.WriteLine(JsonSerializer.Serialize(options));
 
 var completion = await chatClient.GetResponseAsync(messages, options);
 
@@ -74,6 +77,27 @@ public class StringService
     public static string Reverse(string input)
     {
         return "String reversed";
+    }
+}
+
+public class HoroscopeService
+{
+    [Description("Get a horoscope reading for a zodiac sign")]
+    public static string GetHoroscope(string sign)
+    {
+        return $"{sign}: Next Tuesday you will befriend a baby otter.";
+    }
+
+    [Description("Get sun information for a zodiac sign")]
+    public static string GetSun(string sign)
+    {
+        return $"{sign}: The sun is shining bright today.";
+    }
+
+    [Description("Get moon information for a zodiac sign")]
+    public static string GetMoon(string sign)
+    {
+        return $"{sign}: The moon is full tonight.";
     }
 }
 
