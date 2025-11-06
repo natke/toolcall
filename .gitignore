@@ -3,4 +3,4 @@ obj/
 *.sln
 .vs
 .env
-output.json
+*.json

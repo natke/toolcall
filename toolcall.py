@@ -26,44 +26,63 @@ class Qwen2_5:
 
         tools = [
             {
-                "name": "get_horoscope",
-                "description": "Get today's horoscope for an astrological sign.",
-                "parameters": {
-                    "sign": {
-                        "description": "An astrological sign like Taurus or Aquarius",
-                        "type": "str",
-                        "default": ""
+                "type": "function",
+                "function": {
+                    "name": "get_current_weather",
+                    "description": "Get the current weather in a given location",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "city": {
+                                "type": "string",
+                                "description": "The city and state, e.g. San Francisco"
+                            }
+                        },
+                        "required": ["city"]
                     }
                 }
-            },
-            {
-                "name": "get_sun",
-                "description": "Get today's sun sign for an astrological sign.",
-                "parameters": {
-                    "sign": {
-                        "description": "An astrological sign like Taurus or Aquarius",
-                        "type": "str",
-                        "default": ""
-                    }
-                }
-            },
-            {
-                "name": "get_moon",
-                "description": "Get today's moon sign for an astrological sign.",
-                "parameters": {
-                    "sign": {
-                        "description": "An astrological sign like Taurus or Aquarius",
-                        "type": "str",
-                        "default": ""
-                    }
-                }
-            },
+            }
         ]
+
+#            {
+#                "name": "get_horoscope",
+#                "description": "Get today's horoscope for an astrological sign.",
+#                "parameters": {
+#                    "sign": {
+#                        "description": "An astrological sign like Taurus or Aquarius",
+#                        "type": "str",
+#                        "default": ""
+#                    }
+#                }
+#            },
+#            {
+#                "name": "get_sun",
+#                "description": "Get today's sun sign for an astrological sign.",
+#                "parameters": {
+#                    "sign": {
+#                        "description": "An astrological sign like Taurus or Aquarius",
+#                        "type": "str",
+#                        "default": ""
+#                    }
+#                }
+#            },
+#            {
+#                "name": "get_moon",
+#                "description": "Get today's moon sign for an astrological sign.",
+#                "parameters": {
+#                    "sign": {
+#                       "description": "An astrological sign like Taurus or Aquarius",
+#                       "type": "str",
+#                       "default": ""
+#                    }
+#                }
+#            },
+#        ]
 
         # Create a running input list we will add to over time
         input_list = [
             {"role": "system", "content": "You are an assistant with some tools."},
-            {"role": "user", "content": "What is my sun? I am a Scorpio."},
+            {"role": "user", "content": "What is the weather in Tokyo?"},
         ]
 
         # 2. Prompt the model with tools defined
@@ -75,17 +94,16 @@ class Qwen2_5:
         )
 
         # Add response to input list
-        print(response)
+        print(response.model_dump_json(indent=2))
         input_list.append(response.choices[0].delta)
 
         # Save tool call outputs for subsequent requests
         tool_call = response.choices[0].delta["tool_calls"][0]
         tool_name = tool_call["function"]["name"]
         tool_call_arguments = json.loads(tool_call["function"]["arguments"])
-        # print(tool_call)
 
-        def get_horoscope(sign):
-            return f"{sign}: Next Tuesday you will befriend a baby otter."
+        def get_current_weather(city):
+            return f"The weather in {city} is sunny with a high of 75°F."
 
         def get_sun(sign):
             return f"{sign}: The sun is shining bright today."
@@ -95,13 +113,13 @@ class Qwen2_5:
 
                     
         get_tool = {
-            'get_horoscope': get_horoscope,
+            'get_current_weather': get_current_weather,
             'get_sun': get_sun,
             'get_moon': get_moon,
        }
 
-        # 3. Execute the tool logic for get_horoscope
-        result = {f"{tool_name}": get_tool[tool_name](tool_call_arguments["sign"])}
+        # 3. Execute the tool logic for get_weather
+        result = {f"{tool_name}": get_tool[tool_name](tool_call_arguments["city"])}
 
         # 4. Provide tool call results to the model
         input_list.append({
@@ -111,7 +129,7 @@ class Qwen2_5:
 
         print("Final input:")
         for row in input_list:
-            print(row)
+            print(json.dumps(row, indent=2))
 
         response = client.chat.completions.create(
             model=manager.get_model_info(alias).id,
