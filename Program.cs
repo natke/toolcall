@@ -1,7 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using OpenAI;
-using System.Text.Json;
 using System.ClientModel;
 using System.ComponentModel;
 using Microsoft.AI.Foundry.Local;
@@ -40,56 +39,11 @@ ChatOptions options = new()
     MaxOutputTokens = 2048
 };
 
-// This section formats and writes the output to a JSON file. It is for clarity and debugging purposes.
-//Console.WriteLine(JsonSerializer.Serialize(completion, new JsonSerializerOptions { WriteIndented = true }));
-File.WriteAllText("messages.json", JsonSerializer.Serialize(messages, new JsonSerializerOptions { WriteIndented = true }));
-File.WriteAllText("tools.json", JsonSerializer.Serialize(options.Tools, new JsonSerializerOptions { WriteIndented = true }));
+Console.WriteLine($"Prompting model with {messages[1].Contents[0]}");
 
 var completion = await chatClient.GetResponseAsync(messages, options);
 
-// This section formats and writes the output to a JSON file. It is for clarity and debugging purposes.
-//Console.WriteLine(JsonSerializer.Serialize(completion, new JsonSerializerOptions { WriteIndented = true }));
-File.WriteAllText("output.json", JsonSerializer.Serialize(completion, new JsonSerializerOptions { WriteIndented = true }));
-
-
-public class SmsService
-{
-    [Description("Given a phone number and a message send an SMS")]
-    public static string SendSms(string message, string phoneNumber)
-    {
-        return "SMS sent!";
-    }
-}
-
-public class StringService
-{
-    [Description("Given a string, return the reverse of that string")]
-    public static string Reverse(string input)
-    {
-        return "String reversed";
-    }
-}
-
-public class HoroscopeService
-{
-    [Description("Get a horoscope reading for a zodiac sign")]
-    public static string GetHoroscope(string sign)
-    {
-        return $"{sign}: Next Tuesday you will befriend a baby otter.";
-    }
-
-    [Description("Get sun information for a zodiac sign")]
-    public static string GetSun(string sign)
-    {
-        return $"{sign}: The sun is shining bright today.";
-    }
-
-    [Description("Get moon information for a zodiac sign")]
-    public static string GetMoon(string sign)
-    {
-        return $"{sign}: The moon is full tonight.";
-    }
-}
+Console.WriteLine(completion.Messages[2].Contents[0]);
 
 public class WeatherService
 {
