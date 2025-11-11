@@ -7,11 +7,37 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AI.Foundry.Local;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using ChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
-var alias = "qwen2.5-14b";
+// Parse command line arguments for model alias
+var alias = args.Length > 0 ? args[0] : "qwen2.5-0.5b";
 
-Console.WriteLine("Starting model...");
+// Display usage information if help is requested
+if (args.Length > 0 && (args[0] == "--help" || args[0] == "-h"))
+{
+    Console.WriteLine("Usage: toolcall [model-alias]");
+    Console.WriteLine("  model-alias: The model alias to use (default: qwen2.5-0.5b)");
+    Console.WriteLine("  Examples:");
+    Console.WriteLine("    toolcall");
+    Console.WriteLine("    toolcall qwen2.5-14b");
+    Console.WriteLine("    toolcall qwen2.5-0.5b-instruct-generic-cpu:3");
+    return;
+}
+
+Console.WriteLine($"Starting model: {alias}...");
+
+// Create service collection and configure logging
+var services = new ServiceCollection();
+services.AddLogging(builder =>
+{
+    builder.AddConsole().SetMinimumLevel(LogLevel.Trace);
+});
+
+// Build service provider
+var serviceProvider = services.BuildServiceProvider();
+var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
 
 var manager = await FoundryLocalManager.StartModelAsync(aliasOrModelId: alias);
 
@@ -22,7 +48,7 @@ OpenAIClient client = new OpenAIClient(key, new OpenAIClientOptions
     Endpoint = manager.Endpoint
 });
 
-var chatClient = client.GetChatClient(model?.ModelId).AsIChatClient().AsBuilder().UseFunctionInvocation().Build();
+var chatClient = client.GetChatClient(model?.ModelId).AsIChatClient().AsBuilder().UseFunctionInvocation().UseLogging(loggerFactory).Build();
 
 IList<AITool> tools = [
     AIFunctionFactory.Create(WeatherService.GetCurrentWeather)];
@@ -33,17 +59,6 @@ var messages = new ChatMessage[]
     new ChatMessage(ChatRole.User, "How is it in Sydney?")
 };
 
-// This section formats and writes the input to a JSON file. It is for clarity and debugging purposes.
-// It prints the conversation output to a file named output.json. This section can be omitted if not needed.
-var modelInput = new StringBuilder();
-foreach (var m in messages)
-{
-    var msg = new { MessageRole = m.Role, Content = m.Contents?.First() };
-    modelInput.Append($"{JsonSerializer.Serialize(msg, new JsonSerializerOptions { WriteIndented = true })}");
-};
-File.WriteAllText("output.json", modelInput.ToString());
-// End of messages formatting section.
-
 
 ChatOptions options = new()
 {
@@ -52,31 +67,14 @@ ChatOptions options = new()
     MaxOutputTokens = 2048
 };
 
-// This section formats and writes the input to a JSON file. It is for clarity and debugging purposes.
-// It prints the conversation output to a file named output.json. This section can be omitted if not needed.
-var modelOptions = new StringBuilder();
-modelOptions.Append($"{JsonSerializer.Serialize(options, new JsonSerializerOptions { WriteIndented = true })}");
-File.WriteAllText("options.json", modelOptions.ToString());
-// End of options formatting section.
-
-
 Console.WriteLine($"Prompting model with {messages[1].Contents[0]}");
 
 var completion = await chatClient.GetResponseAsync(messages, options);
 
-// This section formats and writes the output to a JSON file. It is for clarity and debugging purposes.
-// It prints the conversation output to a file named output.json. This section can be omitted if not needed.
-var modelOutput = new StringBuilder();
-foreach (var m in completion.Messages)
-{
-    var msg = new { MessageRole = m.Role, Content = m.Contents?.First() };
-    modelOutput.Append($"{JsonSerializer.Serialize(msg, new JsonSerializerOptions { WriteIndented = true })}");
-};
-File.WriteAllText("output.json", modelOutput.ToString());
-// End of output formatting section.
-
-
 Console.WriteLine(completion.Messages[2].Contents[0]);
+
+// Clean up
+serviceProvider.Dispose();
 
 public class WeatherService
 {
