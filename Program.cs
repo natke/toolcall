@@ -3,11 +3,13 @@
 using OpenAI;
 using System.ClientModel;
 using System.ComponentModel;
+using System.Text;
+using System.Text.Json;
 using Microsoft.AI.Foundry.Local;
 using Microsoft.Extensions.AI;
 using ChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
-var alias = "qwen2.5-7b";
+var alias = "qwen2.5-14b";
 
 Console.WriteLine("Starting model...");
 
@@ -31,17 +33,48 @@ var messages = new ChatMessage[]
     new ChatMessage(ChatRole.User, "How is it in Sydney?")
 };
 
+// This section formats and writes the input to a JSON file. It is for clarity and debugging purposes.
+// It prints the conversation output to a file named output.json. This section can be omitted if not needed.
+var modelInput = new StringBuilder();
+foreach (var m in messages)
+{
+    var msg = new { MessageRole = m.Role, Content = m.Contents?.First() };
+    modelInput.Append($"{JsonSerializer.Serialize(msg, new JsonSerializerOptions { WriteIndented = true })}");
+};
+File.WriteAllText("output.json", modelInput.ToString());
+// End of messages formatting section.
+
 
 ChatOptions options = new()
 {
     Tools = tools,
-    ToolMode = ChatToolMode.Auto,
+    ToolMode = ChatToolMode.RequireAny,
     MaxOutputTokens = 2048
 };
+
+// This section formats and writes the input to a JSON file. It is for clarity and debugging purposes.
+// It prints the conversation output to a file named output.json. This section can be omitted if not needed.
+var modelOptions = new StringBuilder();
+modelOptions.Append($"{JsonSerializer.Serialize(options, new JsonSerializerOptions { WriteIndented = true })}");
+File.WriteAllText("options.json", modelOptions.ToString());
+// End of options formatting section.
+
 
 Console.WriteLine($"Prompting model with {messages[1].Contents[0]}");
 
 var completion = await chatClient.GetResponseAsync(messages, options);
+
+// This section formats and writes the output to a JSON file. It is for clarity and debugging purposes.
+// It prints the conversation output to a file named output.json. This section can be omitted if not needed.
+var modelOutput = new StringBuilder();
+foreach (var m in completion.Messages)
+{
+    var msg = new { MessageRole = m.Role, Content = m.Contents?.First() };
+    modelOutput.Append($"{JsonSerializer.Serialize(msg, new JsonSerializerOptions { WriteIndented = true })}");
+};
+File.WriteAllText("output.json", modelOutput.ToString());
+// End of output formatting section.
+
 
 Console.WriteLine(completion.Messages[2].Contents[0]);
 
